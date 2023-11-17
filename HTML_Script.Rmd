@@ -1,0 +1,12 @@
+---
+title: "Assignment 2"
+output:
+  html_document:
+    df_print: paged
+date: "2023-11-04"
+---
+
+```{r}
+
+```
+
