@@ -1,0 +1,608 @@
+---
+title: "Kriging Computing "
+author: "Khumbelo"
+date: "2023-09-19"
+output:
+  pdf_document: default
+  word_document: default
+  html_document:
+    df_print: paged
+---
+library(geoR)
+library(fields)
+library(sp)
+
+```{r}
+points(sic.100, borders=sic.borders,col="green")
+points(sic.367, borders=sic.borders,col="red",add=TRUE)
+```
+```
+
+
+```{r}
+
+# Create a data frame with your data points
+data <- data.frame(
+  x = c(100, 367),
+  y = c(100, 367)
+)
+
+# Calculate summary statistics
+summary(data)
+```
+
+
+
+
+```{r}
+plot.geodata(sic.100,bor=sic.borders)
+
+```
+```{r}
+# Create a data frame with your data points
+data <- data.frame(
+  x = c(100, 367),
+  y = c(100, 367)
+)
+
+# Calculate summary statistics
+summary(data)
+
+```
+
+
+```{r}
+vario.b<- variog(sic.100,option =c ("bin", "cloud", "smooth"),
+bin.cloud=TRUE)
+## variog: computing omnidirectional variogram
+plot(vario.b)
+```
+```{r}
+vario.c <- variog(sic.100, op="cloud")
+## variog: computing omnidirectional variogram
+plot(vario.c)
+vario.c <- variog(sic.100, op="cloud")
+## variog: computing omnidirectional variogram
+bplot.xy(vario.c$u,vario.c$v, breaks=vario.b$u,col="grey80",
+lwd=2,cex=0.1,outline=FALSE)
+
+
+```
+```{r}
+plot(vario.c)
+
+```
+
+
+```{r}
+vario.ex<- variog(sic.100, bin.cloud=TRUE)
+## variog: computing omnidirectional variogram
+plot(vario.ex)
+```
+```{r}
+vario4<-variog4(sic.100)
+plot(vario4,same=FALSE)
+```
+
+
+
+
+```{r}
+vario.ex<- variog(sic.100,option="bin")
+
+vario.sphe<-(variofit(vario.ex,cov.model= "spher",
+ini.cov.pars=c(15000,200)))
+
+par(mfrow=c(2,2), mar=c(3,3,1,1), mgp =c (2,1,0))
+plot(vario.ex,main="Spherical")
+lines.variomodel(cov.model="sphe",cov.pars=c(15000,100),
+nug=0,max.dist=350)
+plot(vario.ex,main="Exponential")
+lines.variomodel(cov.model="exp",cov.pars=c(15000,100),
+nug=0,max.dist=350)
+
+```
+```{r}
+vario.ex<- variog(sic.100,option="bin")
+vario.matern<-(variofit(vario.ex,cov.model= "spher",
+ini.cov.pars=c(15000,200)))
+
+par(mfrow=c(2,2), mar=c(3,3,1,1), mgp =c (2,1,0))
+plot(vario.ex,main="Spherical")
+lines.variomodel(cov.model="sphe",cov.pars=c(15000,100),
+nug=0,max.dist=350)
+plot(vario.ex,main="Exponential")
+lines.variomodel(cov.model="exp",cov.pars=c(15000,100),
+nug=0,max.dist=350)
+
+
+```
+```{r}
+library(geoR)
+kc1<- krige.conv(sic.100, loc = sic.100$coords,
+krige=krige.control(cov.model="spherical",cov.pars=c(16000,47)))
+kc2<- krige.conv(sic.100, loc = sic.367$coords,
+krige=krige.control(cov.model="spherical",cov.pars=c(16000,47)))
+plot(sic.100$data,kc1$predict,xlab="Observed",ylab="Estimated",
+main="Control sample")
+abline(a=0,b=1,col="red")
+plot(sic.367$data,kc2$predict,,xlab="Observed",ylab="Estimated",
+main="Control")
+abline(a=0,b=1,col="red")
+
+```
+
+```{r}
+# Function to calculate RMSE
+calculate_rmse <- function(observed, predicted) {
+  residuals <- observed - predicted
+  rmse <- sqrt(mean(residuals^2))
+  return(rmse)
+}
+
+# Calculate RMSE for kc1
+rmse_kc1 <- calculate_rmse(sic.100$data, kc1$predict)
+cat("RMSE for Control Sample:", rmse_kc1, "\n")
+
+# Calculate RMSE for kc2
+rmse_kc2 <- calculate_rmse(sic.367$data, kc2$predict)
+cat("RMSE for Control:", rmse_kc2, "\n")
+
+```
+
+
+
+```{r}
+# Compute the omnidirectional variogram
+vario.ex <- variog(sic.100, option = "bin")
+
+# Fit spherical model
+vario.sphere <- variofit(vario.ex, cov.model = "sph", ini.cov.pars = c(15000, 200))
+
+# Fit exponential model
+vario.exp <- variofit(vario.ex, cov.model = "exp", ini.cov.pars = c(15000, 100))
+
+# Fit Matérn model (with initial values for sigma^2 and phi)
+vario.matern <- variofit(vario.ex, cov.model = "mat", ini.cov.pars = c(0.1, 15000))
+
+# Fit Gaussian model (with initial values for sigma^2 and phi)
+vario.gaussian <- variofit(vario.ex, cov.model = "gaussian", ini.cov.pars = c(0.1, 15000))
+
+# Calculate RMSE for spherical model
+rmse.sphere <- sqrt(mean((vario.ex$gamma - vario.sphere$gamma)^2))
+
+# Calculate RMSE for exponential model
+rmse.exp <- sqrt(mean((vario.ex$gamma - vario.exp$gamma)^2))
+
+# Calculate RMSE for Matérn model
+rmse.matern <- sqrt(mean((vario.ex$gamma - vario.matern$gamma)^2))
+
+# Calculate RMSE for Gaussian model
+rmse.gaussian <- sqrt(mean((vario.ex$gamma - vario.gaussian$gamma)^2))
+
+# Plot variograms with fitted models and RMSE
+par(mfrow = c(2, 2), mar = c(3, 3, 1, 1), mgp = c(2, 1, 0))
+plot(vario.ex, main = "Spherical")
+lines.variomodel(vario.sphere, max.dist = 350)
+text(200, 0.1, paste("RMSE =", round(rmse.sphere, 2)))
+
+plot(vario.ex, main = "Exponential")
+lines.variomodel(vario.exp, max.dist = 350)
+text(200, 0.1, paste("RMSE =", round(rmse.exp, 2)))
+
+plot(vario.ex, main = "Matérn")
+lines.variomodel(vario.matern, max.dist = 350)
+text(200, 0.1, paste("RMSE =", round(rmse.matern, 2)))
+
+plot(vario.ex, main = "Gaussian")
+lines.variomodel(vario.gaussian, max.dist = 350)
+text(200, 0.1, paste("RMSE =", round(rmse.gaussian, 2)))
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+```{r}
+# Compute the omnidirectional variogram
+vario.ex <- variog(sic.100, option = "bin")
+
+# Fit spherical model without nugget effect
+vario.sphere <- variofit(vario.ex, cov.model = "sph", ini.cov.pars = c(15000, 200))
+rmse.sphere_without_nugget <- sqrt(mean((vario.ex$gamma - vario.sphere$gamma)^2))
+
+# Fit spherical model with nugget effect
+vario.sphere_nugget <- variofit(vario.ex, cov.model = "sph", nugget = TRUE, ini.cov.pars = c(15000, 200))
+rmse.sphere_with_nugget <- sqrt(mean((vario.ex$gamma - vario.sphere_nugget$gamma)^2))
+
+# Repeat the process for other models (exponential, Matérn, Gaussian)...
+
+# Print RMSE values
+cat("Spherical without Nugget RMSE:", round(rmse.sphere_without_nugget, 2), "\n")
+cat("Spherical with Nugget RMSE:", round(rmse.sphere_with_nugget, 2), "\n")
+
+# Repeat for other models...
+
+```
+```{r}
+# Function to calculate RMSE, handling NaN values
+calculate_rmse <- function(observed, predicted) {
+  squared_diff <- (observed - predicted)^2
+  mean_squared_diff <- mean(squared_diff, na.rm = TRUE)
+  if (!is.finite(mean_squared_diff)) {
+    return(NA)  # Return NA if the result is NaN or infinite
+  }
+  return(sqrt(mean_squared_diff))
+}
+
+# Compute the omnidirectional variogram
+vario.ex <- variog(sic.100, option = "bin")
+
+# Fit spherical model without nugget effect
+vario.sphere <- variofit(vario.ex, cov.model = "sph", ini.cov.pars = c(15000, 200))
+rmse.sphere_without_nugget <- calculate_rmse(vario.ex$gamma, vario.sphere$gamma)
+
+# Fit spherical model with nugget effect
+vario.sphere_nugget <- variofit(vario.ex, cov.model = "sph", nugget = TRUE, ini.cov.pars = c(15000, 200))
+rmse.sphere_with_nugget <- calculate_rmse(vario.ex$gamma, vario.sphere_nugget$gamma)
+
+# Print RMSE values
+cat("Spherical without Nugget RMSE:", round(rmse.sphere_without_nugget, 2), "\n")
+cat("Spherical with Nugget RMSE:", round(rmse.sphere_with_nugget, 2), "\n")
+
+```
+
+
+
+
+
+```{r}
+library(geoR)
+pred.grid <- expand.grid(seq(0,350, l=51),seq (0,220, l=51))
+rgb.palette <- colorRampPalette(c("blue", "lightblue",
+"orange", "red"),space = "rgb")
+kc<- krige.conv(sic.100, loc = pred.grid,
+krige=krige.control(cov.model="spherical",cov.pars=c(15000,50)))
+image(kc, loc = pred.grid,col =rgb.palette(20) ,xlab="Coord X",
+ylab="Coord Y",borders=sic.borders,main="Estimation")
+image(kc, krige.var,loc = pred.grid,col=rgb.palette(20),
+xlab="Coord X",ylab="Coord Y",borders=sic.borders,
+main="Kriging variance")
+```
+
+
+
+
+
+```{r}
+library(geoR)
+
+# Assuming sic.100 and sic.borders are already defined
+pred.grid <- expand.grid(seq(0, 350, length = 51), seq(0, 220, length = 51))
+rgb.palette <- colorRampPalette(c("blue", "lightblue", "orange", "red"), space = "rgb")
+
+# Perform kriging
+kc <- krige.conv(sic.100, loc = pred.grid, krige = krige.control(cov.model = "spherical", cov.pars = c(15000, 50)))
+
+# Extract kriging variance
+krige.var <- kc$krige.var
+
+# Plot kriging estimation
+image(kc, loc = pred.grid, col = rgb.palette(20), xlab = "Coord X", ylab = "Coord Y", borders = sic.borders, main = "Estimation")
+
+# Plot kriging variance
+image(kc, krige.var, loc = pred.grid, col = rgb.palette(20), xlab = "Coord X", ylab = "Coord Y", borders = sic.borders, main = "Kriging Variance")
+```
+
+
+
+
+```{r}
+# Assuming sic.100 and sic.borders are already defined
+pred.grid <- expand.grid(seq(0, 350, length = 51), seq(0, 220, length = 51))
+rgb.palette <- colorRampPalette(c("blue", "lightblue", "orange", "red"), space = "rgb")
+
+# Perform kriging
+kc <- krige.conv(sic.100, loc = pred.grid, krige = krige.control(cov.model = "spherical", cov.pars = c(15000, 50)))
+
+# Extract kriging variance
+krige.var <- kc$krige.var
+
+# Plot kriging estimation
+image(kc, loc = pred.grid, col = rgb.palette(20), xlab = "Coord X", ylab = "Coord Y", borders = sic.borders, main = "Estimation")
+
+# Add legend for kriging estimation
+legend("topright", legend = "Estimation", fill = rgb.palette(20), title = "Legend")
+
+# Plot kriging variance
+image(kc, krige.var, loc = pred.grid, col = rgb.palette(20), xlab = "Coord X", ylab = "Coord Y", borders = sic.borders, main = "Kriging Variance")
+
+# Add legend for kriging variance
+legend("topright", legend = "Kriging Variance", fill = rgb.palette(20), title = "Legend")
+
+# Custom legend with color labels
+legend("bottomright", legend = c("Low", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "High"),
+       fill = rgb.palette(20), bty = "n", title = "Color Legend")
+
+
+
+
+```
+
+
+```{r}
+```
+```{r}
+library(geoR)
+kc1<- krige.conv(sic.100, loc = sic.100$coords,
+krige=krige.control(cov.model="spherical",cov.pars=c(16000,47)))
+kc2<- krige.conv(sic.100, loc = sic.367$coords,
+krige=krige.control(cov.model="spherical",cov.pars=c(16000,47)))
+plot(sic.100$data,kc1$predict,xlab="Observed",ylab="Estimated",
+main="Control sample")
+abline(a=0,b=1,col="red")
+plot(sic.367$data,kc2$predict,,xlab="Observed",ylab="Estimated",
+main="Control")
+abline(a=0,b=1,col="red")
+
+```
+```{r}
+# Assuming kc1 and kc2 are defined as described in your code
+
+# Calculate residuals for kc1
+residuals_kc1 <- sic.100$data - kc1$predict
+
+# Calculate RMSE for kc1
+rmse_kc1 <- sqrt(mean(residuals_kc1^2))
+
+# Calculate residuals for kc2
+residuals_kc2 <- sic.367$data - kc2$predict
+
+# Calculate RMSE for kc2
+rmse_kc2 <- sqrt(mean(residuals_kc2^2))
+
+# Print RMSE values
+cat("RMSE for Control sample:", rmse_kc1, "\n")
+cat("RMSE for Control:", rmse_kc2, "\n")
+
+```
+
+
+
+```{r}
+library(geoR)
+plot.geodata(sic.100,bor=sic.borders,lambda=0.5)
+
+```
+
+
+```{r}
+# Create a data frame with your data points
+data <- data.frame(
+  x = c(100, 367),
+  y = c(100, 367)
+)
+
+# Calculate summary statistics
+summary(data)
+
+
+```
+
+```{r}
+library(geoR)
+
+# Assuming sic.100 and sic.borders are defined
+plot.geodata(sic.100, bor = sic.borders, lambda = 0.5)
+
+# Compute the omnidirectional variogram
+vario.ex <- variog(sic.100, option = "bin")
+
+# Fit spherical model
+vario.sphere <- variofit(vario.ex, cov.model = "sph", ini.cov.pars = c(15000, 200))
+
+# Fit exponential model
+vario.exp <- variofit(vario.ex, cov.model = "exp", ini.cov.pars = c(15000, 100))
+
+# Fit Matérn model (with initial values for sigma^2 and phi)
+vario.matern <- variofit(vario.ex, cov.model = "mat", ini.cov.pars = c(0.1, 15000))
+
+# Fit Gaussian model (with initial values for sigma^2 and phi)
+vario.gaussian <- variofit(vario.ex, cov.model = "gaussian", ini.cov.pars = c(0.1, 15000))
+
+# Plot variograms with fitted models
+par(mfrow = c(2, 2), mar = c(3, 3, 1, 1), mgp = c(2, 1, 0))
+plot(vario.ex, main = "Spherical")
+lines.variomodel(vario.sphere, max.dist = 350)
+
+plot(vario.ex, main = "Exponential")
+lines.variomodel(vario.exp, max.dist = 350)
+
+plot(vario.ex, main = "Matérn")
+lines.variomodel(vario.matern, max.dist = 350)
+
+plot(vario.ex, main = "Gaussian")
+lines.variomodel(vario.gaussian, max.dist = 350)
+
+
+```
+
+
+```{r}
+# Assuming sic.100 and sic.borders are defined
+plot.geodata(sic.100, bor = sic.borders, lambda = 0.5)
+
+# Compute the omnidirectional variogram
+vario.ex <- variog(sic.100, option = "bin")
+
+# Fit spherical model
+vario.sphere <- variofit(vario.ex, cov.model = "sph", ini.cov.pars = c(15000, 200))
+
+# Plot variogram with fitted spherical model
+par(mfrow = c(1, 1), mar = c(3, 3, 1, 1), mgp = c(2, 1, 0))
+plot(vario.ex, main = "Spherical")
+lines.variomodel(vario.sphere, max.dist = 350)
+
+```
+
+```{r}
+# Compute variogram using the first approach
+vario.ex <- variog(sic.100, option = "bin")
+
+# Fit exponential variogram model using the first approach
+vario.exp <- variofit(vario.ex, cov.model = "exp", 
+                      ini.cov.pars = c(15000, 100))
+
+# Plot exponential variogram model using the first approach
+plot(vario.ex, main = "Exponential (Approach 1)")
+lines.variomodel(cov.model = "exp", cov.pars = c(15000, 100),
+                 nug = 0, max.dist = 350)
+
+# Model parameters for the second approach
+modNugget <- 0        # Intercept-like term
+modRange <- 100000    # Distance of the plateau
+modSill <- 0.75       # Semivariance at the range
+
+# Create variogram model using the second approach
+ppt.vgm1 <- vgm(psill = modSill, 
+                "Exp",        # Exponential model
+                range = modRange, 
+                nugget = modNugget)
+
+# Fit variogram model to observed variogram using the second approach
+ppt.vgm2 <- fit.variogram(ppt.var, ppt.vgm1)
+
+# Plot observed variogram and fitted exponential variogram model using the second approach
+plot(ppt.var, pptE.vgm2, 
+     main = "Swiss Precip. Exponential Variogram Model (Approach 2)")
+
+```
+
+
+
+
+```{r}
+library(geoR)
+kct<- krige.conv(sic.100, loc = pred.grid,
+krige=krige.control(cov.model="matern",cov.pars=c(105, 36),
+kappa=1,nugget=6.9,lambda=0.5))
+pred.grid <- expand.grid(seq(0,350, l=51),seq (0,220, l=51))
+rgb.palette <- colorRampPalette(c("blue", "lightblue",
+"orange", "red"),space = "rgb")
+image(kct, loc = pred.grid,col =rgb.palette(20) , xlab="Coord X",
+ylab="Coord Y",borders=sic.borders,main="Estimation")
+image(kct, krige.var,loc = pred.grid,col =rgb.palette(20) ,
+xlab="Coord X",ylab="Coord Y",borders=sic.borders,
+main="Kriging variance")
+```
+
+
+
+
+
+
+```{r}
+library(geoR)
+pred.grid <- expand.grid(seq(0, 350, length.out = 51), seq(0, 220, length.out = 51))
+rgb.palette <- colorRampPalette(c("blue", "lightblue", "orange", "red"), space = "rgb")
+kc <- krige.conv(sic.100, loc = pred.grid,
+                 krige = krige.control(cov.model = "spherical", cov.pars = c(15000, 50)))
+image(kc, loc = pred.grid, col = rgb.palette(20), xlab = "Coord X",
+      ylab = "Coord Y", borders = sic.borders, main = "Estimation")
+krige.var <- kc$krige.var
+image(kc, krige.var, loc = pred.grid, col = rgb.palette(20),
+      xlab = "Coord X", ylab = "Coord Y", borders = sic.borders,
+      main = "Kriging Variance")
+```
+
+
+```{r}
+#   estimated and observed values}
+library(geoR)
+kc1<- krige.conv(sic.100, loc = sic.100$coords,
+krige=krige.control(cov.model="spherical",cov.pars=c(16000,47)))
+kc2<- krige.conv(sic.100, loc = sic.367$coords,
+krige=krige.control(cov.model="spherical",cov.pars=c(16000,47)))
+plot(sic.100$data,kc1$predict,xlab="Observed",ylab="Estimated",
+main="Control sample")
+abline(a=0,b=1,col="red")
+plot(sic.367$data,kc2$predict,,xlab="Observed",ylab="Estimated",
+main="Control")
+abline(a=0,b=1,col="red")
+
+```
+
+```{r}
+# Assuming kc1 and kc2 are defined as described in your code
+
+# Calculate RMSE for kc1
+rmse_kc1 <- sqrt(mean((sic.100$data - kc1$predict)^2))
+
+# Calculate RMSE for kc2
+rmse_kc2 <- sqrt(mean((sic.367$data - kc2$predict)^2))
+
+# Print RMSE values
+cat("RMSE for Con sample:", rmse_kc1, "\n")
+cat("RMSE for Control Kriging:", rmse_kc2, "\n")
+
+```
+
+```{r}
+kc1 <- krige.conv(sic.100, loc = sic.100$coords, krige=krige.control(cov.model="spherical",cov.pars=c(16000,47)))
+kc2 <- krige.conv(sic.100, loc = sic.367$coords, krige=krige.control(cov.model="spherical",cov.pars=c(16000,47)))
+
+```
+
+
+```{r}
+
+library(geoR)
+kc1<- krige.conv(sic.100, loc = sic.100$coords,
+krige=krige.control(cov.model="spherical",cov.pars=c(16000,47)))
+kc2<- krige.conv(sic.100, loc = sic.367$coords,
+krige=krige.control(cov.model="spherical",cov.pars=c(16000,47)))
+plot(sic.100$data,kc1$predict,xlab="Observed",ylab="Estimated",
+main="Control sample")
+abline(a=0,b=1,col="red")
+plot(sic.367$data,kc2$predict,,xlab="Observed",ylab="Estimated",
+main="Control")
+abline(a=0,b=1,col="red")
+
+
+
+```
+
+```{r}
+# Assuming kc1 and kc2 are your kriging predictions
+# Assuming sic.100 and sic.367 are your datasets
+# Assuming kc1 and kc2 are your kriging predictions
+# Assuming sic.100 and sic.367 are your datasets
+
+# Function to calculate RMSE
+calculate_rmse <- function(observed, predicted) {
+  residuals <- observed - predicted
+  rmse <- sqrt(mean(residuals^2))
+  return(rmse)
+}
+
+# Calculate RMSE for kc1
+rmse_kc1 <- calculate_rmse(sic.100$data, kc1$predict)
+cat("RMSE for Control Sample:", rmse_kc1, "\n")
+
+# Calculate RMSE for kc2
+rmse_kc2 <- calculate_rmse(sic.367$data, kc2$predict)
+cat("RMSE for Control:", rmse_kc2, "\n")
+
+
+
+```
+
+
